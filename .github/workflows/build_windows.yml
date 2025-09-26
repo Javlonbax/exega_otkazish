@@ -5,21 +5,35 @@ on:
 jobs:
   build:
     runs-on: windows-latest
+    timeout-minutes: 20  # juda cho'zilsa job to'xtaydi
     steps:
       - uses: actions/checkout@v4
 
+      # Go o'rnatish va modul keshini yoqish
       - uses: actions/setup-go@v5
         with:
           go-version: '1.22'
+          cache: true  # go.sum asosida modul keshini yoqadi
 
-      - name: Tidy
-        run: go mod tidy
+      # Tarmoq sekin bo'lsa ham barqarorroq bo'lsin
+      - name: Set Go proxy
+        run: |
+          go env -w GOPROXY=https://proxy.golang.org,direct
+          go env -w GOSUMDB=sum.golang.org
 
-      - name: Build (GUI)
-        run: go build -ldflags "-s -w -H=windowsgui" -o KadastrApp.exe kadastr_gui_fyne.go
+      # Oldindan modullarni yuklab oling (loglar aniq bo‘lsin)
+      - name: Download modules
+        run: go mod download -x
 
+      # Build (GUI)
+      - name: Build
+        run: go build -trimpath -ldflags "-s -w -H=windowsgui" -o KadastrApp.exe kadastr_gui_fyne.go
+
+      # Artefaktni yuklash
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: KadastrApp
           path: KadastrApp.exe
+          if-no-files-found: error
+
